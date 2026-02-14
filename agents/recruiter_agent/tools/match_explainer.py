@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
-
+from langchain_core.tools import tool
 
 def _normalize_skill(s: str) -> str:
     """Normalise une compétence pour comparaison (lower + strip)."""
@@ -17,14 +17,6 @@ def analyze_candidate_match(
 ) -> Dict[str, Any]:
     """
     Analyse les correspondances entre skills candidat et exigences job.
-
-    Retour standardisé (stable pour UI / tests / ranking):
-    {
-      "match_score": float (0..100),
-      "explanation": str,
-      "matches": [str],
-      "gaps": [str]
-    }
     """
 
     candidate_skills = candidate_skills or []
@@ -62,7 +54,6 @@ def analyze_candidate_match(
         "explanation": explanation,
         "matches": matches,
         "gaps": gaps,
-    
         "similarity": round(similarity, 4),
     }
 
@@ -81,11 +72,17 @@ class MatchExplainer:
             score_in_percent=self.score_in_percent,
         )
 
-
+@tool
 def match_explainer_tool(candidate: Dict[str, Any], job: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Tool "haut niveau" (si tu veux brancher dans ton pipeline agent).
-    On tente de récupérer des listes de skills depuis des dictionnaires.
+    Explain the match between a candidate and a job description.
+    
+    Args:
+        candidate: A dictionary containing candidate 'skills' (list of strings).
+        job: A dictionary containing job 'requirements' or 'skills' (list of strings).
+        
+    Returns:
+        Analysis dictionary (score, matches, gaps).
     """
     candidate_skills = candidate.get("skills") or candidate.get("candidate_skills") or []
     job_requirements = job.get("requirements") or job.get("job_requirements") or job.get("skills") or []

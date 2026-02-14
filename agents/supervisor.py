@@ -106,7 +106,7 @@ def determine_route(user_message: str) -> str:
     # Keywords for Lead Recruiter
     recruiter_keywords = [
         "cv", "resume", "parse", "analyze", "rank", "score", 
-        "candidate", "skill", "extract", "scrape", "screen",
+        "skill", "extract", "scrape", "screen",
         "application", "applicant", "profile"
     ]
     
@@ -114,16 +114,16 @@ def determine_route(user_message: str) -> str:
     manager_keywords = [
         "offer", "template", "email", "draft", "write", 
         "job description", "interview", "letter", "invitation",
-        "communication", "generate offer", "create job"
+        "communication", "generate offer", "create job", "hiring"
     ]
+    
+    # Check for manager keywords FIRST (tasks often involve candidates but are manager actions)
+    if any(keyword in message_lower for keyword in manager_keywords):
+        return "Hiring_Manager"
     
     # Check for recruiter keywords
     if any(keyword in message_lower for keyword in recruiter_keywords):
         return "Lead_Recruiter"
-    
-    # Check for manager keywords
-    if any(keyword in message_lower for keyword in manager_keywords):
-        return "Hiring_Manager"
     
     # Default to FINISH for greetings or unclear requests
     return "FINISH"

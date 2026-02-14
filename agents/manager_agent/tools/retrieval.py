@@ -3,126 +3,92 @@ Template Retrieval Tools
 
 This module contains tools for retrieving HR templates
 using RAG (Retrieval-Augmented Generation) with ChromaDB.
-
-Group: Hiring Manager Agent (Group 2)
-
-Tools:
-- template_retriever_tool: Query ChromaDB for best template by role
-- ingest_templates_to_chromadb: Load templates into ChromaDB
-- initialize_chromadb_collection: Set up ChromaDB collection
 """
 
-from typing import Optional
+from typing import Optional, List
 from langchain_core.tools import tool
+
+# Path to your ChromaDB logic
+CHROMA_DIR = "vectorstore/chroma"
+
+# Embedding model (singleton/lazy load)
+_embedding_model = None
+_vectordb = None
+
+def get_embedding_model():
+    """Returns real embeddings if available, else fake/random ones."""
+    global _embedding_model
+    if _embedding_model is None:
+        try:
+            import transformers
+            from langchain_huggingface import HuggingFaceEmbeddings
+            _embedding_model = HuggingFaceEmbeddings(
+                model_name="sentence-transformers/all-MiniLM-L6-v2"
+            )
+        except Exception as e:
+            print(f"Warning: Error loading HF Embeddings (fallback to Fake): {e}")
+            from langchain_core.embeddings import FakeEmbeddings
+            _embedding_model = FakeEmbeddings(size=384)
+    return _embedding_model
+
+def _get_vectordb():
+    global _vectordb
+    if _vectordb is None:
+        try:
+            from langchain_community.vectorstores import Chroma
+            embeddings = get_embedding_model()
+            # Load ChromaDB (persistent)
+            _vectordb = Chroma(
+                persist_directory=CHROMA_DIR,
+                embedding_function=embeddings
+            )
+        except Exception as e:
+            print(f"Error initializing ChromaDB: {e}")
+            return None
+    return _vectordb
 
 
 @tool
-def template_retriever_tool(
-    role_type: str,
-    context: Optional[str] = None
-) -> dict:
+def template_retriever_tool(role_type: str, context: Optional[str] = None) -> dict:
     """
-    Retrieve the best HR template from ChromaDB based on role.
-    
-    Queries ChromaDB to find the best template based on the role
-    (e.g., retrieve "Senior Tech Package" for an Engineer role).
+    Retrieve top templates from ChromaDB for a given role.
     
     Args:
-        role_type: Type of role/template to retrieve 
-                   (e.g., 'senior_engineer', 'sales', 'intern').
-        context: Optional additional context for semantic matching.
-    
+        role_type: The role or keywords to search for (e.g., "Senior Python Engineer").
+        context: Optional additional context (e.g., category).
+
     Returns:
-        A dictionary containing:
-        - success: Boolean indicating if retrieval succeeded
-        - template: The retrieved template content
-        - template_name: Name/ID of the template
-        - similarity_score: How well the template matches the query
-        - alternatives: Other relevant templates (optional)
-        - error: Error message if retrieval failed
+        dict: {
+            "success": bool,
+            "templates": list of matching templates
+        }
     """
-    # TODO: Connect to ChromaDB, use embeddings for semantic search, return best match
-    raise NotImplementedError("Implement template_retriever_tool")
-
-
-def get_template(role_type: str, context: Optional[str] = None) -> dict:
-    """
-    Core template retrieval function (non-tool version).
+    db = _get_vectordb()
+    if db is None:
+        return {"success": False, "error": "Database not initialized"}
     
-    Args:
-        role_type: Type of template to retrieve.
-        context: Optional semantic context.
-    
-    Returns:
-        Retrieved template data.
-    """
-    # TODO: Implement core retrieval logic
-    raise NotImplementedError("Implement get_template")
+    try:
+        # Perform similarity search
+        # Using role_type as query
+        results = db.similarity_search(role_type, k=3)
+        
+        # Filter by context if it maps to a metadata category? 
+        # For now, just return results
+        
+        templates = [
+            {
+                "text": doc.page_content,
+                "metadata": doc.metadata
+            }
+            for doc in results
+        ]
+        
+        return {
+            "success": True, 
+            "templates": templates,
+            "count": len(templates)
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
-
-def ingest_templates_to_chromadb(templates_dir: str) -> dict:
-    """
-    Ingest a folder of template files into ChromaDB.
-    
-    Loads templates (Company Values, Offer Templates, Benefit Packages)
-    from a directory and stores them with embeddings in ChromaDB.
-    
-    Args:
-        templates_dir: Path to folder containing template files.
-    
-    Returns:
-        A dictionary containing:
-        - success: Boolean indicating if ingestion succeeded
-        - documents_ingested: Number of templates loaded
-        - collection_name: Name of ChromaDB collection
-        - error: Error message if ingestion failed
-    """
-    # TODO: Load text files, generate embeddings, store in ChromaDB with metadata
-    raise NotImplementedError("Implement ingest_templates_to_chromadb")
-
-
-def initialize_chromadb_collection(collection_name: str = "hr_templates") -> bool:
-    """
-    Initialize ChromaDB collection for templates.
-    
-    Args:
-        collection_name: Name of the collection to create.
-    
-    Returns:
-        True if initialization succeeded.
-    """
-    # TODO: Create ChromaDB client, create collection, configure embedding function
-    raise NotImplementedError("Implement initialize_chromadb_collection")
-
-
-def list_available_templates() -> list[str]:
-    """
-    List all available template types in ChromaDB.
-    
-    Returns:
-        List of template type names.
-    """
-    # TODO: Query ChromaDB for distinct template types
-    raise NotImplementedError("Implement list_available_templates")
-
-
-def add_template(
-    template_type: str,
-    name: str,
-    content: str,
-    metadata: Optional[dict] = None
-) -> dict:
-    """
-    Add a new template to ChromaDB.
-    
-    Args:
-        template_type: Category of template.
-        name: Template name/ID.
-        content: Template content.
-        metadata: Additional metadata.
-    
-    Returns:
-        Result of the operation.
-    """
-    # TODO: Add single template with embedding to ChromaDB
-    raise NotImplementedError("Implement add_template")
+# Placeholder for ingestion tool if needed, or keep it separate as a script
