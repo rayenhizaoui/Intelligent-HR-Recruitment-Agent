@@ -70,6 +70,26 @@ graph TD
 2.  **Lead Recruiter Agent**: A specialized worker node responsible for all candidate-facing data processing.
 3.  **Hiring Manager Agent**: A specialized worker node responsible for output generation, communication, and salary data.
 
+## AI Models & Technology Stack
+
+The platform uses a hybrid **Agentic Architecture** rather than a single LLM.
+
+### 🧠 Logic (The "Brain")
+-   **Model**: Deterministic State Machines orchestrated by **LangGraph**.
+-   **Function**: Uses rule-based routing and keyword detection to ensure predictable, cost-effective execution without relying on external LLM APIs for flow control.
+
+### 🔍 Semantic Intelligence
+-   **Model**: `sentence-transformers/all-MiniLM-L6-v2` (via HuggingFace).
+-   **Function**: Vectorizes text for **Semantic Ranking** (matching candidates to jobs) and **RAG** (retrieving meaningful templates). This acts as the "reasoning" core for similarity tasks.
+
+### 📝 Extraction (NLP)
+-   **Model**: **Spacy** (en_core_web_sm).
+-   **Function**: Named Entity Recognition (NER) to extract skills, organizations, and dates from unstructured CV text.
+
+### ✍️ Generation
+-   **Engine**: Dynamic Python Templating (`str.format_map`).
+-   **Function**: Ensures consistent, professional output for offers and emails without the risk of hallucination common in generative models.
+
 ## Tools & Capabilities
 
 ### 🛠️ Lead Recruiter Tools
